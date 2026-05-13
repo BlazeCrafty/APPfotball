@@ -3,185 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Football 3D</title>
+<title>Football Online</title>
 
 <style>
-
-body{
-    margin:0;
-    overflow:hidden;
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #111;
+  color: white;
 }
 
-canvas{
-    display:block;
+#menu {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  background: linear-gradient(#1a1a1a, #000);
 }
 
+button {
+  padding: 15px 30px;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+#game {
+  display: none;
+}
 </style>
 </head>
 
 <body>
 
+<div id="menu">
+  <h1>⚽ Football Online</h1>
+  <button onclick="play()">Jouer en ligne</button>
+  <button onclick="alert('À venir')">Créer salle</button>
+  <button onclick="alert('À venir')">Rejoindre salle</button>
+</div>
+
+<div id="game"></div>
+
+<script>
+function play() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("game").style.display = "block";
+  startGame();
+}
+</script>
+
 <script type="module">
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js';
 
-const scene = new THREE.Scene();
+function startGame(){
 
+const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
-const camera = new THREE.PerspectiveCamera(
-75,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 
-const renderer = new THREE.WebGLRenderer({
-antialias:true
-});
-
+const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
+document.getElementById("game").appendChild(renderer.domElement);
 
-renderer.shadowMap.enabled = true;
-
-document.body.appendChild(renderer.domElement);
-
-const light = new THREE.DirectionalLight(0xffffff,3);
-
-light.position.set(10,20,10);
-
-light.castShadow = true;
-
-scene.add(light);
-
-const ambient = new THREE.AmbientLight(0xffffff,0.5);
-
-scene.add(ambient);
-
+// field
 const field = new THREE.Mesh(
 new THREE.PlaneGeometry(60,40),
-new THREE.MeshStandardMaterial({
-color:0x2e8b57
-})
+new THREE.MeshStandardMaterial({color:0x2ecc71})
 );
-
 field.rotation.x = -Math.PI/2;
-
-field.receiveShadow = true;
-
 scene.add(field);
 
-const line = new THREE.Mesh(
-new THREE.RingGeometry(4.9,5,32),
-new THREE.MeshBasicMaterial({
-color:0xffffff,
-side:THREE.DoubleSide
-})
+// player (TEMP sphere)
+const player = new THREE.Mesh(
+new THREE.SphereGeometry(1),
+new THREE.MeshStandardMaterial({color:0xff0000})
 );
-
-line.rotation.x = -Math.PI/2;
-line.position.y = 0.01;
-
-scene.add(line);
-
-const player = new THREE.Group();
-
-const body = new THREE.Mesh(
-new THREE.CapsuleGeometry(0.5,1.5,4,8),
-new THREE.MeshStandardMaterial({
-color:0xff0000
-})
-);
-
-body.castShadow = true;
-
-player.add(body);
-
 player.position.y = 1;
-
 scene.add(player);
 
-const ball = new THREE.Mesh(
-new THREE.SphereGeometry(0.5,32,32),
-new THREE.MeshStandardMaterial({
-color:0xffffff
-})
-);
+// light
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(10,20,10);
+scene.add(light);
 
-ball.castShadow = true;
-
-ball.position.set(0,0.5,0);
-
-scene.add(ball);
-
-function createGoal(x){
-
-    const goal = new THREE.Mesh(
-        new THREE.BoxGeometry(1,4,10),
-        new THREE.MeshStandardMaterial({
-            color:0xffffff
-        })
-    );
-
-    goal.position.set(x,2,0);
-
-    scene.add(goal);
-}
-
-createGoal(-29);
-createGoal(29);
-
-camera.position.set(0,18,18);
-
+// camera
+camera.position.set(0,15,15);
 camera.lookAt(0,0,0);
 
+// movement
 const keys = {};
-
-document.addEventListener("keydown",(e)=>{
-    keys[e.key.toLowerCase()] = true;
-});
-
-document.addEventListener("keyup",(e)=>{
-    keys[e.key.toLowerCase()] = false;
-});
-
-let ballVelocityX = 0;
-let ballVelocityZ = 0;
+document.addEventListener("keydown",(e)=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",(e)=>keys[e.key.toLowerCase()]=false);
 
 function animate(){
+  requestAnimationFrame(animate);
 
-    requestAnimationFrame(animate);
+  if(keys["z"]) player.position.z -= 0.2;
+  if(keys["s"]) player.position.z += 0.2;
+  if(keys["q"]) player.position.x -= 0.2;
+  if(keys["d"]) player.position.x += 0.2;
 
-    let speed = 0.15;
-
-    if(keys["z"]) player.position.z -= speed;
-    if(keys["s"]) player.position.z += speed;
-    if(keys["q"]) player.position.x -= speed;
-    if(keys["d"]) player.position.x += speed;
-
-    const dx = player.position.x - ball.position.x;
-    const dz = player.position.z - ball.position.z;
-
-    const distance = Math.sqrt(dx*dx + dz*dz);
-
-    if(distance < 1.5){
-
-        ballVelocityX -= dx * 0.03;
-        ballVelocityZ -= dz * 0.03;
-
-    }
-
-    ball.position.x += ballVelocityX;
-    ball.position.z += ballVelocityZ;
-
-    ballVelocityX *= 0.96;
-    ballVelocityZ *= 0.96;
-
-    renderer.render(scene,camera);
+  renderer.render(scene,camera);
 }
 
 animate();
+
+}
 
 </script>
 
