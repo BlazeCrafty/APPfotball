@@ -1,122 +1,82 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Football Online</title>
-
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #111;
-  color: white;
-}
-
+body { margin:0; overflow:hidden; font-family:Arial; }
 #menu {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  background: linear-gradient(#1a1a1a, #000);
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:#111;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
 }
-
-button {
-  padding: 15px 30px;
-  font-size: 18px;
-  border: none;
-  cursor: pointer;
-  border-radius: 10px;
-}
-
-#game {
-  display: none;
-}
+button { padding:10px 20px; font-size:16px; }
 </style>
 </head>
 
 <body>
 
 <div id="menu">
-  <h1>⚽ Football Online</h1>
-  <button onclick="play()">Jouer en ligne</button>
-  <button onclick="alert('À venir')">Créer salle</button>
-  <button onclick="alert('À venir')">Rejoindre salle</button>
+  <h1>Football Online</h1>
+  <button onclick="createRoom()">Créer salle</button>
 </div>
 
 <div id="game"></div>
 
-<script>
-function play() {
-  document.getElementById("menu").style.display = "none";
-  document.getElementById("game").style.display = "block";
-  startGame();
-}
-</script>
-
+<script src="/socket.io/socket.io.js"></script>
 <script type="module">
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js';
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
+
+const socket = io();
+
+let scene, camera, renderer;
+let players = {};
 
 function startGame(){
+    scene = new THREE.Scene();
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById("game").appendChild(renderer.domElement);
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.getElementById("game").appendChild(renderer.domElement);
+    const field = new THREE.Mesh(
+        new THREE.PlaneGeometry(50,30),
+        new THREE.MeshBasicMaterial({color:0x2ecc71})
+    );
 
-// field
-const field = new THREE.Mesh(
-new THREE.PlaneGeometry(60,40),
-new THREE.MeshStandardMaterial({color:0x2ecc71})
-);
-field.rotation.x = -Math.PI/2;
-scene.add(field);
+    field.rotation.x = -Math.PI/2;
+    scene.add(field);
 
-// player (TEMP sphere)
-const player = new THREE.Mesh(
-new THREE.SphereGeometry(1),
-new THREE.MeshStandardMaterial({color:0xff0000})
-);
-player.position.y = 1;
-scene.add(player);
+    camera.position.set(0,10,10);
 
-// light
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(10,20,10);
-scene.add(light);
-
-// camera
-camera.position.set(0,15,15);
-camera.lookAt(0,0,0);
-
-// movement
-const keys = {};
-document.addEventListener("keydown",(e)=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",(e)=>keys[e.key.toLowerCase()]=false);
+    animate();
+}
 
 function animate(){
-  requestAnimationFrame(animate);
-
-  if(keys["z"]) player.position.z -= 0.2;
-  if(keys["s"]) player.position.z += 0.2;
-  if(keys["q"]) player.position.x -= 0.2;
-  if(keys["d"]) player.position.x += 0.2;
-
-  renderer.render(scene,camera);
+    requestAnimationFrame(animate);
+    renderer.render(scene,camera);
 }
 
-animate();
+window.createRoom = () => {
+    let roomId = prompt("Nom de la salle:");
+    socket.emit("createRoom", roomId);
+    document.getElementById("menu").style.display = "none";
+    startGame();
+};
 
-}
+socket.on("roomUpdate", (data) => {
+    console.log("Players:", data);
+});
 
 </script>
 
